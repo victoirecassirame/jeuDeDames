@@ -1,5 +1,9 @@
 package jeu;
 
+import static jeu.Damier.CaseType.Piece;
+import static jeu.Damier.Couleur.Blanc;
+import static jeu.Damier.Couleur.Noir;
+
 public class Damier {
 
     //Je créé les possibilités des arguments de la Piece
@@ -17,6 +21,11 @@ public class Damier {
     public static class Piece {
         private TypePiece type;
         private Couleur couleur;
+
+        public static final Piece PionBlanc = new Piece(TypePiece.Pion, Blanc);
+        public static final Piece PionNoir = new Piece (TypePiece.Pion, Noir);
+        public static final Piece DameBLanche = new Piece(TypePiece.Dame, Blanc);
+        public static final Piece DameNoire = new Piece (TypePiece.Dame, Noir);
 
         // Je créé un constructeur Piece qui prend 2 attributs qui vont avoir des valeurs    (--> instance = new)
         public Piece(TypePiece type, Couleur couleur) {
@@ -77,6 +86,32 @@ public class Damier {
     // Case[][] tableau à 2 dimensions de case
     private final Case[][] cases;
     private final Taille taille;
+    private final int nbCasesJouables;
+
+    private static Case[][] generateDamier(int taille, Couleur casesUtilisees){
+        Damier.Case[][] cases = new Damier.Case[taille][taille];
+
+        for (int ligne = 0; ligne < cases.length; ligne++) {
+            for (int colonne = 0; colonne < cases[ligne].length; colonne++) {
+
+                Damier.Couleur couleur = (ligne + colonne) % 2 == 0 ? Blanc : Damier.Couleur.Noir;
+
+                if (couleur != casesUtilisees) {
+                    cases[ligne][colonne] = new Damier.Case(Damier.CaseType.Interdit, couleur, null);
+                } else {
+                        cases[ligne][colonne] = new Damier.Case(Damier.CaseType.Vide, couleur, null);
+                }
+
+            }
+        }
+        return cases;
+    }
+
+    public Damier(int taille, Couleur caseUtilisees){
+        this(generateDamier(taille, caseUtilisees));
+    }
+
+
 
     // Ma classe s'appelle Damier.
     //Ici je créé un constructeur de l'objet de ma classe qui prend en paramètre un tableau à 2 dimensions de Cases
@@ -97,6 +132,7 @@ public class Damier {
         this.cases = cases;
         //Ternaire : si condition (?) vraie alors ... sinon ... (:)
         this.taille = colonnes == 8 ? Taille.x8 : Taille.x10;
+        this.nbCasesJouables = this.colonnes*this.lignes/2;
 
         if (colonnes != lignes) {
             throw new RuntimeException("Le damier n'est pas carré.");
@@ -139,6 +175,16 @@ public class Damier {
         this.cases[ligne][colonne] = c;
     }
 
+    public void setPiece(int index, Piece piece){
+        Case c = getCase(index);
+        setCase(index, new Case(Piece, c.getCouleur(), piece));
+    }
+
+    public void setPiece(int ligne, int colonne, Piece piece){
+        Case c = getCase(ligne, colonne);
+        setCase(ligne, colonne, new Case(Piece, c.getCouleur(), piece));
+    }
+
     public int[] conversionManouryATableau(int index) {
         int utilisables = this.colonnes / 2;
         int ligne = (index - 1) / utilisables;
@@ -164,4 +210,7 @@ public class Damier {
         return this.taille;
     }
 
+    public int getNbCasesJouables() {
+        return nbCasesJouables;
+    }
 }

@@ -46,7 +46,6 @@ public class JeuDeDamesImpl implements JeuDeDame {
 
     private final JeuDeDamesOption options;
 
-
     public JeuDeDamesImpl(JeuDeDamesOption options, Damier damier) {
         this.options = options;
         joueurActuel = options.premierJoueur;
@@ -59,6 +58,7 @@ public class JeuDeDamesImpl implements JeuDeDame {
         joueurActuel = options.premierJoueur;
 
         int w = options.taille == Damier.Taille.x8 ? 8 : 10;
+        this.damier = new Damier(w, options.casesUtilisees);
         Damier.Case[][] cases = new Damier.Case[w][w];
         int nbLignesParCouleur = options.taille == Damier.Taille.x8 ? 3 : 4;
 
@@ -67,15 +67,11 @@ public class JeuDeDamesImpl implements JeuDeDame {
 
                 Damier.Couleur couleur = (ligne + colonne) % 2 == 0 ? Blanc : Damier.Couleur.Noir;
 
-                if (couleur != options.casesUtilisees) {
-                    cases[ligne][colonne] = new Damier.Case(Damier.CaseType.Interdit, couleur, null);
-                } else {
+                if (couleur == options.casesUtilisees) {
                     if (ligne < nbLignesParCouleur) {
-                        cases[ligne][colonne] = new Damier.Case(Piece, couleur, new Damier.Piece(Damier.TypePiece.Pion, Damier.Couleur.Noir));
+                        this.damier.setCase(ligne, colonne, new Damier.Case(Piece, couleur, new Damier.Piece(Damier.TypePiece.Pion, Damier.Couleur.Noir)));
                     } else if (ligne >= (w - nbLignesParCouleur)) {
-                        cases[ligne][colonne] = new Damier.Case(Piece, couleur, new Damier.Piece(Damier.TypePiece.Pion, Blanc));
-                    } else {
-                        cases[ligne][colonne] = new Damier.Case(Damier.CaseType.Vide, couleur, null);
+                        this.damier.setCase(ligne, colonne, new Damier.Case(Piece, couleur, new Damier.Piece(Damier.TypePiece.Pion, Blanc)));
                     }
                 }
 
@@ -83,7 +79,6 @@ public class JeuDeDamesImpl implements JeuDeDame {
         }
 
         //Ce damier là est un nouvel objet de type Damier (cases ??)
-        this.damier = new Damier(cases);
     }
 
     @Override
@@ -129,31 +124,55 @@ public class JeuDeDamesImpl implements JeuDeDame {
         }
 
 
-        int[] possibilite = getDeplacementsPossibles(depart);
+        int[][] possibilites = getDeplacementsPossibles(depart);
 
-        boolean trouve = false;
-        for (int i = 0; i < possibilite.length && !trouve; i++) {
-            trouve = possibilite[i] == arrivee;
+        int[] possibilite = null;
+        for (int i = 0; i < possibilites.length && possibilite == null; i++) {
+            if (possibilites[i][0] == arrivee) {
+                possibilite = possibilites[i];
+            }
         }
-        if (!trouve) {
+        if (possibilite == null) {
             throw new IllegalStateException("Le déplacement demandé n'est pas autorisé."); // au lieu de pas de déplacement possible
+        }
+
+        if (possibilite.length == 1) {
+            //pas de prise
+            for (int i = 1; i <= damier.getNbCasesJouables(); i++) {
+                Damier.Case c = getDamier().getCase(i);
+                if (c.getType() == Piece && c.getPiece().getCouleur() == joueurActuel && i != depart) {
+                    int[][] deplacementsPossibles = getDeplacementsPossibles(i);
+                    if (deplacementsPossibles.length > 0 && deplacementsPossibles[0].length > 1) {
+                        throw new IllegalStateException("Vous devez privilégier la prise.");
+                    }
+                }
+            }
         }
 
         Damier.Case caseArrivee = getDamier().getCase(arrivee);
         getDamier().setCase(depart, caseArrivee);
         getDamier().setCase(arrivee, caseDepart);
 
-        int[] coordDepart = getDamier().conversionManouryATableau(depart);
-        int[] coordArrivee = getDamier().conversionManouryATableau(arrivee);
-
-        int diffLigneDepartArrivee = Math.abs(coordDepart[0] - coordArrivee[0]);
-        if (diffLigneDepartArrivee > 1) {
-            getDamier().setCase((coordDepart[0] + coordArrivee[0]) / 2, (coordDepart[1] + coordArrivee[1]) / 2, caseArrivee);
+        if (possibilite.length > 1) {
+            getDamier().setCase(possibilite[1], caseArrivee);
         }
 
+        //Pion devient Dame
+        //TODO: dame en passant INTERDIT
+        int[] coordArrivee = getDamier().conversionManouryATableau(arrivee);
+        if (caseDepart.getPiece().getType() == Damier.TypePiece.Pion && coordArrivee[0] == (caseDepart.getPiece().getCouleur() == Blanc ? 0 : getDamier().getLignes() - 1)) {
+            int[][] deplacementsPossibles = getDeplacementsPossibles(arrivee);
+            if (deplacementsPossibles.length == 0 || deplacementsPossibles[0].length == 1) {
+                getDamier().setPiece(arrivee, caseDepart.getPiece().getCouleur() == Blanc ? Damier.Piece.DameBLanche : Damier.Piece.DameNoire);
+            }
+        }
 
-        this.joueurActuel = this.joueurActuel == Blanc ? Noir : Blanc;
-        //TODO: verifier si le joueur a encore des pieces : si non : perdant. si oui : est ce qu'elles peuvent bouger si oui ok, si non perdant
+        //TODO: si joueur peut encore manger alors joue encore
+        int[][] d1 = getDeplacementsPossibles(arrivee);
+        if (d1.length == 0 || d1[0].length == 1) {
+            this.joueurActuel = this.joueurActuel == Blanc ? Noir : Blanc;
+        }
+
         boolean peutBouger = false;
         for (int ligne = 0; ligne < getDamier().getLignes() && !peutBouger; ligne++) {
             for (int colonne = 0; colonne < getDamier().getColonnes() && !peutBouger; colonne++) {
@@ -166,13 +185,13 @@ public class JeuDeDamesImpl implements JeuDeDame {
                 }
             }
         }
-        if(!peutBouger) {
+        if (!peutBouger) {
             gagnant = joueurActuel == Noir ? Blanc : Noir;
         }
 
     }
 
-//    public int[] getDeplacementsPossibles(int numeroCase) {
+    //    public int[] getDeplacementsPossibles(int numeroCase) {
 //
 //        List<Integer> res = new ArrayList<>();
 //
@@ -204,12 +223,11 @@ public class JeuDeDamesImpl implements JeuDeDame {
 //        }
 //        return resArray;
 //    }
-
-
-    public int[] getDeplacementsPossibles(int numeroCase) {
+    //TODO: faire renvoyer la case d'arrivée et la case mangee (pour interdire de repasser sur cette case)
+    public int[][] getDeplacementsPossibles(int numeroCase) {
 
         // création d'une liste qui va contenir les cases d'arrivée possibles
-        List<Integer> listeCasesArrivee = new ArrayList<>();
+        List<int[]> listeCasesArrivee = new ArrayList<>();
 
         // on attribue la case de départ (numeroCase) à la variable c
         Damier.Case c = getDamier().getCase(numeroCase);
@@ -240,7 +258,7 @@ public class JeuDeDamesImpl implements JeuDeDame {
                                     // je checke que c'est bien une case vide
                                     if (caseArrivee.getType() == Damier.CaseType.Vide) {
                                         //Si tout est bon, alors j'ajoute caseArrivee à la liste des arrivees possibles
-                                        listeCasesArrivee.add(getDamier().conversionTableauAManoury(l2, c2));
+                                        listeCasesArrivee.add(new int[]{getDamier().conversionTableauAManoury(l2, c2), getDamier().conversionTableauAManoury(l1, c1)});
                                     }
                                 }
                             }
@@ -258,14 +276,14 @@ public class JeuDeDamesImpl implements JeuDeDame {
                     if (ligne >= 0 && colonne >= 0 && ligne < getDamier().getLignes() && colonne < getDamier().getColonnes()) {
                         Damier.Case caseArrivee = getDamier().getCase(ligne, colonne);
                         if (caseArrivee.getType() == Damier.CaseType.Vide) {
-                            listeCasesArrivee.add(getDamier().conversionTableauAManoury(ligne, colonne));
+                            listeCasesArrivee.add(new int[]{getDamier().conversionTableauAManoury(ligne, colonne)});
                         }
                     }
                 }
             }
         }
 
-        int[] resArray = new int[listeCasesArrivee.size()];
+        int[][] resArray = new int[listeCasesArrivee.size()][];
         for (int i = 0; i < resArray.length; i++) {
             resArray[i] = listeCasesArrivee.get(i);
         }

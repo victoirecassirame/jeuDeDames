@@ -4,7 +4,7 @@ import ui.AfficherDamier;
 
 public class Main {
      public static void main (String[] args){
-         JeuDeDame jeu = new JeuDeDamesImpl(JeuDeDamesImpl.Internationale);
+         JeuDeDame jeu = new JeuDeDamesImpl(JeuDeDamesImpl.Anglaise);
          AfficherDamier.afficherDamier(jeu.getDamier());
          jeu.joue(31, 27); // les blancs commencent
          jeu.joue (18,22);

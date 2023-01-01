@@ -13,7 +13,8 @@ public interface JeuDeDame {
     void joue(int depart, int arrivee);
 //    void joue();
 
-    int[] getDeplacementsPossibles(int numeroCase);
+    int[][] getDeplacementsPossibles(int numeroCase);
 
     void setGagnant(Damier.Couleur gagnant);
+
 }
