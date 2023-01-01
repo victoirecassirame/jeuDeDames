@@ -24,7 +24,7 @@ public class Damier {
 
         public static final Piece PionBlanc = new Piece(TypePiece.Pion, Blanc);
         public static final Piece PionNoir = new Piece (TypePiece.Pion, Noir);
-        public static final Piece DameBLanche = new Piece(TypePiece.Dame, Blanc);
+        public static final Piece DameBlanche = new Piece(TypePiece.Dame, Blanc);
         public static final Piece DameNoire = new Piece (TypePiece.Dame, Noir);
 
         // Je créé un constructeur Piece qui prend 2 attributs qui vont avoir des valeurs    (--> instance = new)

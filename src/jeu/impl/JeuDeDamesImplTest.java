@@ -5,6 +5,7 @@ import jeu.JeuDeDame;
 import org.junit.jupiter.api.Test;
 import ui.AfficherDamier;
 
+import static jeu.Damier.Couleur.Noir;
 import static jeu.Damier.Piece.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -49,7 +50,7 @@ public class JeuDeDamesImplTest {
         JeuDeDame jeu = new JeuDeDamesImpl(JeuDeDamesImpl.Internationale);
         Damier.Case caseDepartAvant = jeu.getDamier().getCase(17);
         assertEquals(Damier.CaseType.Piece, caseDepartAvant.getType());
-        assertEquals(Damier.Couleur.Noir, caseDepartAvant.getPiece().getCouleur());
+        assertEquals(Noir, caseDepartAvant.getPiece().getCouleur());
 
         assertThrows(IllegalStateException.class, () -> {
             jeu.joue(17, 22);
@@ -98,7 +99,7 @@ public class JeuDeDamesImplTest {
         //déplacement noir de 22 à 28
         Damier.Case caseDepartNoir = jeu.getDamier().getCase(22);
         assertEquals(Damier.CaseType.Piece, caseDepartNoir.getType());
-        assertEquals(Damier.Couleur.Noir, caseDepartNoir.getPiece().getCouleur()); //? est ce que ça expect bien la couleur de la pièce ?
+        assertEquals(Noir, caseDepartNoir.getPiece().getCouleur()); //? est ce que ça expect bien la couleur de la pièce ?
 
         Damier.Case caseArriveeNoir = jeu.getDamier().getCase(28);
         assertEquals(Damier.CaseType.Vide, caseArriveeNoir.getType());
@@ -173,7 +174,7 @@ public class JeuDeDamesImplTest {
     @Test
     public void TestPionDevientDame() {
 
-        Damier d = new Damier(10, Damier.Couleur.Noir);
+        Damier d = new Damier(10, Noir);
         d.setPiece(6, PionBlanc);
         d.setPiece(45, PionNoir);
 
@@ -187,12 +188,12 @@ public class JeuDeDamesImplTest {
         assertEquals(Damier.Couleur.Blanc, d.getCase(1).getPiece().getCouleur());
 
         assertEquals(Damier.TypePiece.Dame, d.getCase(50).getPiece().getType());
-        assertEquals(Damier.Couleur.Noir, d.getCase(50).getPiece().getCouleur());
+        assertEquals(Noir, d.getCase(50).getPiece().getCouleur());
     }
 
     @Test
     public void TestCouleurPionNeDevientPasDame() {
-        Damier d = new Damier(10, Damier.Couleur.Noir);
+        Damier d = new Damier(10, Noir);
         d.setPiece(36, PionBlanc);
         d.setPiece(41, PionNoir);
         d.setPiece(15, PionNoir);
@@ -210,13 +211,13 @@ public class JeuDeDamesImplTest {
         assertEquals(Damier.Couleur.Blanc, d.getCase(47).getPiece().getCouleur());
 
         assertEquals(Damier.TypePiece.Pion, d.getCase(4).getPiece().getType());
-        assertEquals(Damier.Couleur.Noir, d.getCase(4).getPiece().getCouleur());
+        assertEquals(Noir, d.getCase(4).getPiece().getCouleur());
     }
 
 
     @Test
     public void TestDameEnPassantInterdit() {
-        Damier d = new Damier(10, Damier.Couleur.Noir);
+        Damier d = new Damier(10, Noir);
         d.setPiece(16, PionBlanc);
         d.setPiece(36, PionNoir);
         d.setPiece(41, PionBlanc);
@@ -227,10 +228,10 @@ public class JeuDeDamesImplTest {
         JeuDeDame jeu = new JeuDeDamesImpl(JeuDeDamesImpl.Internationale, d);
         jeu.joue(16, 11);
 
-        assertEquals(Damier.Couleur.Noir, jeu.getJoueurActuel());
+        assertEquals(Noir, jeu.getJoueurActuel());
         jeu.joue(36, 47);
         AfficherDamier.afficherDamier(d);
-        assertEquals(Damier.Couleur.Noir, jeu.getJoueurActuel());
+        assertEquals(Noir, jeu.getJoueurActuel());
         assertEquals(Damier.TypePiece.Pion, d.getCase(47).getPiece().getType());
         AfficherDamier.afficherDamier(d);
         jeu.joue(47, 38);
@@ -240,7 +241,7 @@ public class JeuDeDamesImplTest {
 
     @Test
     public void TestGagnantAucunPion() {
-        Damier d = new Damier(10, Damier.Couleur.Noir);
+        Damier d = new Damier(10, Noir);
         d.setPiece(1, 0, PionBlanc);
         d.setPiece(2, 1, PionNoir);
 
@@ -255,7 +256,7 @@ public class JeuDeDamesImplTest {
 
     @Test
     public void TestGagnantAucunDeplacementPossible() {
-        Damier d = new Damier(10, Damier.Couleur.Noir);
+        Damier d = new Damier(10, Noir);
         d.setPiece(5, PionNoir);
         d.setPiece(10, PionBlanc);
         d.setPiece(20, PionBlanc);
@@ -268,5 +269,92 @@ public class JeuDeDamesImplTest {
 
         assertEquals(Damier.Couleur.Blanc, jeu.getGagnant());
     }
+
+
+    @Test
+    public void TestDeplacementLongSimpleDameAutorise(){
+        Damier d = new Damier(10, Noir);
+
+        d.setPiece(15, DameBlanche);
+        d.setPiece(16, PionBlanc);
+        d.setPiece(1, PionNoir);
+
+        JeuDeDame jeu = new JeuDeDamesImpl(JeuDeDamesImpl.Internationale, d);
+        AfficherDamier.afficherDamier(d);
+
+        jeu.joue(15, 29);
+        AfficherDamier.afficherDamier(d);
+    }
+
+    @Test
+    public void TestDeplacementLongPriseDameAutorise(){
+        Damier d = new Damier(10, Noir);
+
+        d.setPiece(15, DameBlanche);
+        d.setPiece(29, PionNoir);
+
+        JeuDeDame jeu = new JeuDeDamesImpl(JeuDeDamesImpl.Internationale, d);
+        AfficherDamier.afficherDamier(d);
+
+        jeu.joue(15, 33);
+        AfficherDamier.afficherDamier(d);
+    }
+
+    @Test
+    public void TestDeplacementLongPriseDameAutoriseSaut2PionsInterdits(){
+        Damier d = new Damier(10, Noir);
+
+        d.setPiece(15, DameBlanche);
+        d.setPiece(29, PionNoir);
+        d.setPiece(24, PionNoir);
+
+        JeuDeDame jeu = new JeuDeDamesImpl(JeuDeDamesImpl.Internationale, d);
+        AfficherDamier.afficherDamier(d);
+
+        assertThrows(IllegalStateException.class, () -> {
+            jeu.joue(15, 33);
+        });
+        AfficherDamier.afficherDamier(d);
+    }
+
+
+
+    @Test
+    public void TestPriseObligatoireDame(){
+        Damier d = new Damier(10, Noir);
+
+        d.setPiece(15, DameBlanche);
+        d.setPiece(29, PionNoir);
+
+        JeuDeDame jeu = new JeuDeDamesImpl(JeuDeDamesImpl.Internationale, d);
+        AfficherDamier.afficherDamier(d);
+
+        assertThrows(IllegalStateException.class, () -> {
+            //Dame Blanche censée manger pion en 29
+            jeu.joue(15, 4);
+        });
+        AfficherDamier.afficherDamier(d);
+    }
+
+
+    @Test
+    public void TestDeplacementLongInterditReglesAnglaises(){
+        Damier d = new Damier(8, Noir);
+
+        d.setPiece(1, DameNoire);
+        d.setPiece(15, DameBlanche);
+
+        JeuDeDame jeu = new JeuDeDamesImpl(JeuDeDamesImpl.Anglaise, d);
+        AfficherDamier.afficherDamier(d);
+
+
+        assertThrows(IllegalStateException.class, () -> {
+            //Dame Blanche censée manger pion en 29
+            jeu.joue(1, 19);
+        });
+
+
+    }
+
 
 }

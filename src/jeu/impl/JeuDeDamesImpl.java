@@ -5,39 +5,42 @@ import jeu.JeuDeDame;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static jeu.Damier.CaseType.Piece;
+import static jeu.Damier.CaseType.Vide;
 import static jeu.Damier.Couleur.Blanc;
 import static jeu.Damier.Couleur.Noir;
-
-import java.util.Scanner;
 
 public class JeuDeDamesImpl implements JeuDeDame {
 
     public static class JeuDeDamesOption {
 
         // nom de variable ? de constructeur ? de classe ? enum ?
-        private Damier.Taille taille;
-        private Damier.Couleur casesUtilisees;
-        private Damier.Couleur premierJoueur;
+        private final Damier.Taille taille;
+        private final Damier.Couleur casesUtilisees;
+        private final Damier.Couleur premierJoueur;
 
-        private boolean priseArrierePossible;
+        private final boolean priseArrierePossible;
 
-        private boolean priseObligatoire;
+        private final boolean priseObligatoire;
+
+        private final boolean deplacementLongDame;
 
         // constructeur avec param et attributs qui sont les param.
-        public JeuDeDamesOption(Damier.Taille taille, Damier.Couleur casesUtilisees, Damier.Couleur premierJoueur, boolean priseArrierePossible, boolean priseObligatoire) {
+        public JeuDeDamesOption(Damier.Taille taille, Damier.Couleur casesUtilisees, Damier.Couleur premierJoueur, boolean priseArrierePossible, boolean priseObligatoire, boolean deplacementLongDame) {
             this.taille = taille;
             this.casesUtilisees = casesUtilisees;
             this.premierJoueur = premierJoueur;
             this.priseArrierePossible = priseArrierePossible;
             this.priseObligatoire = priseObligatoire;
+            this.deplacementLongDame = deplacementLongDame;
         }
     }
 
     // nom de la classe + nom spécifique = new + nom de la classe(paramètres/Attributs avec leurs valeurs spécifiques qui ici ont été définies dans enums)
-    public static JeuDeDamesOption Anglaise = new JeuDeDamesOption(Damier.Taille.x8, Noir, Noir, false, true);
-    public static JeuDeDamesOption Internationale = new JeuDeDamesOption(Damier.Taille.x10, Noir, Blanc, true, true);
+    public static JeuDeDamesOption Anglaise = new JeuDeDamesOption(Damier.Taille.x8, Noir, Noir, false, true, false);
+    public static JeuDeDamesOption Internationale = new JeuDeDamesOption(Damier.Taille.x10, Noir, Blanc, true, true, true);
 
 
     private Damier.Couleur joueurActuel;
@@ -163,7 +166,7 @@ public class JeuDeDamesImpl implements JeuDeDame {
         if (caseDepart.getPiece().getType() == Damier.TypePiece.Pion && coordArrivee[0] == (caseDepart.getPiece().getCouleur() == Blanc ? 0 : getDamier().getLignes() - 1)) {
             int[][] deplacementsPossibles = getDeplacementsPossibles(arrivee);
             if (deplacementsPossibles.length == 0 || deplacementsPossibles[0].length == 1) {
-                getDamier().setPiece(arrivee, caseDepart.getPiece().getCouleur() == Blanc ? Damier.Piece.DameBLanche : Damier.Piece.DameNoire);
+                getDamier().setPiece(arrivee, caseDepart.getPiece().getCouleur() == Blanc ? Damier.Piece.DameBlanche : Damier.Piece.DameNoire);
             }
         }
 
@@ -233,56 +236,96 @@ public class JeuDeDamesImpl implements JeuDeDame {
         Damier.Case c = getDamier().getCase(numeroCase);
         // on vérifie que c est une pièce, sinon, ce n'est pas une case correcte
         if (c.getType() == Piece) {
-            // création d'un tableau de coordonnées x,y de l'indice manoury de la case de départ
-            int[] coord = getDamier().conversionManouryATableau(numeroCase);
-            //si seulement déplacement avant des pions : les pions noirs vers le bas, les blancs vers le haut
-            int sensVer = c.getPiece().getCouleur() == Noir ? 1 : -1;
-            // je regarde la couleur adverse
-            Damier.Couleur couleurAdverse = c.getPiece().getCouleur() == Damier.Couleur.Noir ? Blanc : Noir;
-            for (int sensH = -1; sensH <= 1; sensH += 2) {
-                for (int sensV = -1; sensV <= 1; sensV += 2) {
-                    if (this.options.priseArrierePossible || sensV == sensVer) {
-                        int l1 = coord[0] + sensV, c1 = coord[1] + sensH;
-                        //j'élimine déplacement hors limites (out of bounds) des colonnes/lignes 0 et 7/9
-                        if (l1 >= 0 && c1 >= 0 && l1 < damier.getLignes() && c1 < damier.getColonnes()) {
-                            //case +1 prend les coordonnées (l1,c1)
-                            Damier.Case caseIntermediaire1 = getDamier().getCase(l1, c1);
-                            //je check que cette case est bien une pièce adverse
-                            if (caseIntermediaire1.getType() == Piece && caseIntermediaire1.getPiece().getCouleur() == couleurAdverse) {
-                                // je checke case+2
-                                int l2 = coord[0] + sensV * 2, c2 = coord[1] + sensH * 2;
-                                //j'élimine déplacement hors limites (out of bounds) des colonnes/lignes 0 et 7/9
-                                if (l2 >= 0 && c2 >= 0 && l2 < damier.getLignes() && c2 < damier.getColonnes()) {
-                                    //c2/arrivée prend (l2, c2)
-                                    Damier.Case caseArrivee = getDamier().getCase(l2, c2);
-                                    // je checke que c'est bien une case vide
-                                    if (caseArrivee.getType() == Damier.CaseType.Vide) {
-                                        //Si tout est bon, alors j'ajoute caseArrivee à la liste des arrivees possibles
-                                        listeCasesArrivee.add(new int[]{getDamier().conversionTableauAManoury(l2, c2), getDamier().conversionTableauAManoury(l1, c1)});
+            if (c.getPiece().getType() == Damier.TypePiece.Pion || !options.deplacementLongDame) {
+                // création d'un tableau de coordonnées x,y de l'indice manoury de la case de départ
+                int[] coord = getDamier().conversionManouryATableau(numeroCase);
+                //si seulement déplacement avant des pions : les pions noirs vers le bas, les blancs vers le haut
+                int sensVer = c.getPiece().getCouleur() == Noir ? 1 : -1;
+                // je regarde la couleur adverse
+                Damier.Couleur couleurAdverse = c.getPiece().getCouleur() == Damier.Couleur.Noir ? Blanc : Noir;
+                for (int sensH = -1; sensH <= 1; sensH += 2) {
+                    for (int sensV = -1; sensV <= 1; sensV += 2) {
+                        if (this.options.priseArrierePossible || sensV == sensVer || !options.deplacementLongDame) {
+                            int l1 = coord[0] + sensV, c1 = coord[1] + sensH;
+                            //j'élimine déplacement hors limites (out of bounds) des colonnes/lignes 0 et 7/9
+                            if (l1 >= 0 && c1 >= 0 && l1 < damier.getLignes() && c1 < damier.getColonnes()) {
+                                //case +1 prend les coordonnées (l1,c1)
+                                Damier.Case caseIntermediaire1 = getDamier().getCase(l1, c1);
+                                //je check que cette case est bien une pièce adverse
+                                if (caseIntermediaire1.getType() == Piece && caseIntermediaire1.getPiece().getCouleur() == couleurAdverse) {
+                                    // je checke case+2
+                                    int l2 = coord[0] + sensV * 2, c2 = coord[1] + sensH * 2;
+                                    //j'élimine déplacement hors limites (out of bounds) des colonnes/lignes 0 et 7/9
+                                    if (l2 >= 0 && c2 >= 0 && l2 < damier.getLignes() && c2 < damier.getColonnes()) {
+                                        //c2/arrivée prend (l2, c2)
+                                        Damier.Case caseArrivee = getDamier().getCase(l2, c2);
+                                        // je checke que c'est bien une case vide
+                                        if (caseArrivee.getType() == Damier.CaseType.Vide) {
+                                            //Si tout est bon, alors j'ajoute caseArrivee à la liste des arrivees possibles
+                                            listeCasesArrivee.add(new int[]{getDamier().conversionTableauAManoury(l2, c2), getDamier().conversionTableauAManoury(l1, c1)});
+                                        }
                                     }
                                 }
                             }
                         }
                     }
+
+                    // si la liste ne contient rien ou que la prise n'est pas obligatoire, alors on peut faire un déplacement simple
+
                 }
 
-                // si la liste ne contient rien ou que la prise n'est pas obligatoire, alors on peut faire un déplacement simple
 
-            }
-
-            if (listeCasesArrivee.size() == 0 || !this.options.priseObligatoire) {
-                for (int sensH = -1; sensH <= 1; sensH += 2) {
-                    int ligne = coord[0] + sensVer, colonne = coord[1] + sensH;
-                    if (ligne >= 0 && colonne >= 0 && ligne < getDamier().getLignes() && colonne < getDamier().getColonnes()) {
-                        Damier.Case caseArrivee = getDamier().getCase(ligne, colonne);
-                        if (caseArrivee.getType() == Damier.CaseType.Vide) {
-                            listeCasesArrivee.add(new int[]{getDamier().conversionTableauAManoury(ligne, colonne)});
+                if (listeCasesArrivee.size() == 0 || !this.options.priseObligatoire) {
+                    for (int sensH = -1; sensH <= 1; sensH += 2) {
+                        int ligne = coord[0] + sensVer, colonne = coord[1] + sensH;
+                        if (ligne >= 0 && colonne >= 0 && ligne < getDamier().getLignes() && colonne < getDamier().getColonnes()) {
+                            Damier.Case caseArrivee = getDamier().getCase(ligne, colonne);
+                            if (caseArrivee.getType() == Damier.CaseType.Vide) {
+                                listeCasesArrivee.add(new int[]{getDamier().conversionTableauAManoury(ligne, colonne)});
+                            }
                         }
                     }
                 }
+            } else {
+                //Gestion déplacement dames
+                int[] caseDepart = getDamier().conversionManouryATableau(numeroCase);
+                for (int sensH = -1; sensH <= 1; sensH += 2) {
+                    for (int sensV = -1; sensV <= 1; sensV += 2) {
+                        int pieceMangee = -1;
+                        for (int i = 1; i < getDamier().getLignes(); i++) {
+
+                            int ligne = caseDepart[0] + sensH*i, col = caseDepart[1] +sensV*i;
+                            if(ligne < 0 || col < 0 || ligne >= getDamier().getLignes() || col >= getDamier().getColonnes()) {
+                                break;
+                            }
+
+                            Damier.Case caseDest = getDamier().getCase(ligne, col);
+                            if(caseDest.getType()==Piece && caseDest.getPiece().getCouleur()!=joueurActuel){
+                                if(pieceMangee == -1){
+                                    pieceMangee = getDamier().conversionTableauAManoury(ligne, col);
+                                }else{
+                                    break;
+                                }
+                            }else{
+                                if(caseDest.getType()==Vide){
+                                    if(pieceMangee == -1){
+                                            listeCasesArrivee.add(new int[]{getDamier().conversionTableauAManoury(ligne, col)});
+                                    }else{
+                                        listeCasesArrivee.add(new int[]{getDamier().conversionTableauAManoury(ligne, col), pieceMangee});
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+
+                }
+                List<int[]> listePriseDame = listeCasesArrivee.stream().filter(ca -> ca.length > 1).collect(Collectors.toList());
+                if(listePriseDame.size() > 0){
+                    listeCasesArrivee = listePriseDame;
+                }
             }
         }
-
         int[][] resArray = new int[listeCasesArrivee.size()][];
         for (int i = 0; i < resArray.length; i++) {
             resArray[i] = listeCasesArrivee.get(i);
